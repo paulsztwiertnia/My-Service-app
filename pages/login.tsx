@@ -45,6 +45,7 @@ const Login = () => {
   };
 
   return (
+    <>
     <div>
       {/* <form onSubmit={SignInWithEmail}>
         <input 
@@ -64,6 +65,10 @@ const Login = () => {
 
       <button onClick={SignInWithGoogle}>Sign In with Google</button>
     </div>
+    <div className="bg-blue-500 min-h-screen flex items-center justify-center">
+      <h1 className="text-white">Login Page</h1>
+    </div>
+    </>
   );
 };
 
