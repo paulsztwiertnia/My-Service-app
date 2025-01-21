@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function NavBar() {
   const [user, setUser] = useState<any>(null);
@@ -17,14 +18,18 @@ export default function NavBar() {
 
   return (
     <nav>
-      <Link href="/">Home</Link>
+      <Link href="/signup">
+        <Image src="/drive-wise-website-logo.png" alt="logo" width={200} height={150} />
+      </Link>
+      
+      <Link className="px-4" href="/">Home</Link>
       {user ? (
         <>
-          <Link href="/dashboard">Dashboard</Link>
-          <button onClick={() => auth.signOut()}>Sign Out</button>
+          <Link className="px-4" href="/dashboard">Dashboard</Link>
+          <button className="px-4" onClick={() => auth.signOut()}>Sign Out</button>
         </>
       ) : (
-        <Link href="/auth/login">Sign In</Link>
+        <Link className="px-4" href="/auth/login">Sign In</Link>
       )}
     </nav>
   );
