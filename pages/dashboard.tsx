@@ -333,6 +333,7 @@ export default function Dashboard() {
           <p>Loading...</p>
         )}
       </div>
+
       <div className="bg-red-600">
         <h2>Enter your Vehicles information</h2>
         <form onSubmit={handleSubmitVehicle}>
@@ -453,11 +454,12 @@ export default function Dashboard() {
             onChange={(e) => setCost(e.target.value)}
           />
           <p>Enter the date of the service</p>
-          <div className="p-5 mb-10">  
+          <div className="mb-10">  
             <DatePicker
                 selected={date}
                 onChange={(date: Date | null) => setDate(date)}
-                dateFormat="yyyy/MM/dd"
+                placeholderText="yyyy/mm/dd"
+                dateFormat="yyyy/mm/dd"
                 className="p-2 border rounded-md"
             />
           </div>
