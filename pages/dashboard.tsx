@@ -56,7 +56,7 @@ export default function Dashboard() {
       {user && <VehicleRecords userId={user.uid} />}
 
       {/* if user object exists with more than 0 vehicle then show service records */}
-      {user && <ServiceRecords userId={user.uid} />}
+      {/* {user && <ServiceRecords userId={user.uid} />} */}
     </div>
   );
 }
