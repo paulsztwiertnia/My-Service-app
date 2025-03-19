@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
 import { useRouter } from 'next/router';
 
@@ -22,6 +22,7 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
   const [editMileage, setEditMileage] = useState('');
   const [editingVehicleRecord, setEditingVehicleRecord] = useState<any>(null);
   const [vehicleRecords, setVehicleRecords] = useState<any[]>([]);
+  const [nextId, setNextId] = useState(1);
 
   useEffect(() => {
     const fetchVehicleRecords = async () => {
@@ -30,6 +31,12 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         const querySnapshot = await getDocs(q);
         const vehicleRecordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setVehicleRecords(vehicleRecordsData);
+
+        const numericIds = vehicleRecordsData
+          .map(record => parseInt(record.id))
+          .filter(id => !isNaN(id));
+        const highestId = Math.max(0, ...numericIds);
+        setNextId(highestId + 1);
       }
     };
 
@@ -45,7 +52,8 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
     }
 
     try {
-      await addDoc(collection(db, "Vehicle Records"), {
+      const docRef = doc(db, "Vehicle Records", nextId.toString());
+      await setDoc(docRef, {
         userId: auth.currentUser?.uid,
         email: auth.currentUser?.email,
         dateCreated: new Date().toISOString(),
@@ -59,6 +67,7 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
       setModel('');
       setYear('');
       setMileage('');
+      setNextId(nextId + 1);
 
       const q = query(collection(db, "Vehicle Records"), where("userId", "==", auth.currentUser?.uid));
       const querySnapshot = await getDocs(q);
