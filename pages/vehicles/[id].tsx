@@ -85,7 +85,7 @@ export default function VehiclePage() {
   return (
     <div>
       <NavBar />
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="mx-auto p-4">
         <button 
           onClick={() => router.push('/dashboard')}
           className="mb-4 bg-gray-500 text-white px-4 py-2 rounded"
@@ -120,32 +120,7 @@ export default function VehiclePage() {
         <div className="bg-white shadow-lg rounded-lg p-6">
           <h2 className="text-xl font-bold mb-4">Service History</h2>
           <ServiceRecords userId={auth.currentUser?.uid} />
-          {serviceRecords.length > 0 ? (
-            <table className="min-w-full">
-              <thead>
-                <tr>
-                  <th>Service Type</th>
-                  <th>Cost</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {serviceRecords.map((record) => (
-                  <tr key={record.id}>
-                    <td>{record.serviceType}</td>
-                    <td>${record.cost}</td>
-                    <td>
-                      {record.serviceDate ? 
-                        new Date(record.serviceDate.seconds * 1000).toLocaleDateString() 
-                        : "N/A"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>No service records found for this vehicle.</p>
-          )}
+
         </div>
       </div>
     </div>
