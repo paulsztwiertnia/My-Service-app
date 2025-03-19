@@ -123,35 +123,44 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
   };
 
   return (
-    <div className="bg-blue-500">
-      <h2>Enter a new record</h2>
-      <form onSubmit={handleSubmit}>
-        <p>Enter the type of service</p>
-        <input
-          type="text"
-          placeholder="Type of Service"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <p>Enter the cost</p>
-        <input
-          type="number"
+    <div className="px-2 mt-10">
+      <h2 className="text-2xl font-bold">Enter a new service record</h2>
+      <form onSubmit={handleSubmit} className="flex flex-row gap-2">
+        <div className="flex flex-col gap-2">
+          <p>Enter the type of service</p>
+          <input
+            type="text"
+            placeholder="Type of Service"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="border p-2 mb-2"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p>Enter the cost</p>
+          <input
+            type="number"
           placeholder="Cost"
           value={cost}
-          onChange={(e) => setCost(e.target.value)}
-        />
-        <p>Enter the date of the service</p>
-        <div className="mb-10">
-          <DatePicker
+            onChange={(e) => setCost(e.target.value)}
+            className="border p-2 mb-2"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p>Enter the date of the service</p>
+          <div className="mb-10">
+            <DatePicker
             selected={date}
             onChange={(date: Date | null) => setDate(date)}
             placeholderText="yyyy/mm/dd"
             dateFormat="yyyy/mm/dd"
-            className="p-2 border rounded-md"
-          />
+              className="p-2 border rounded-md"
+            />
+          </div>
         </div>
-        <br />
-        <button type="submit">Submit</button>
+        <div className="flex flex-col mt-8">
+          <button type="submit" className="bg-blue-500 text-white px-4 py-2">Submit</button>
+        </div>
       </form>
 
       <h2>Service Records</h2>
