@@ -21,15 +21,26 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
   const [editDate, setEditDate] = useState<Date | null>(null);
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [records, setRecords] = useState<any[]>([]);
-  const [make, setMake] = useState('');
+  const [mileage, setMileage] = useState('');
+
+  const sortRecordsByDate = (records: any[]) => {
+    return records.sort((a, b) => {
+      const dateA = a.serviceDate?.seconds || 0;
+      const dateB = b.serviceDate?.seconds || 0;
+      return dateB - dateA;
+    });
+  };
 
   useEffect(() => {
     const fetchRecords = async () => {
       if (auth.currentUser) {
-        const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser.uid));
+        const q = query(
+          collection(db, "Service Records"), 
+          where("userId", "==", auth.currentUser.uid),
+        );
         const querySnapshot = await getDocs(q);
         const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setRecords(recordsData);
+        setRecords(sortRecordsByDate(recordsData));
       }
     };
 
@@ -52,18 +63,21 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
         cost: Number(cost),
         serviceType: text,
         serviceDate: date,
-        vehicleMake: make,
+        vehicleMileage: Number(mileage),
       });
 
       setText('');
       setCost('');
       setDate(null);
-      setMake('');
-
+      setMileage('');
       const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
       const querySnapshot = await getDocs(q);
       const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRecords(recordsData);
+      
+      // Sort records by service date (latest first)
+      const sortedRecords = sortRecordsByDate(recordsData);
+      
+      setRecords(sortedRecords);
     } catch (error) {
       console.error("Error adding service: ", error);
     }
@@ -75,7 +89,7 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
       const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
       const querySnapshot = await getDocs(q);
       const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRecords(recordsData);
+      setRecords(sortRecordsByDate(recordsData));
     } catch (error) {
       console.error("Error deleting service: ", error);
     }
@@ -116,15 +130,19 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
       const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
       const querySnapshot = await getDocs(q);
       const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRecords(recordsData);
+      
+      // Sort records by service date (latest first)
+      const sortedRecords = sortRecordsByDate(recordsData);
+      
+      setRecords(sortedRecords);
     } catch (error) {
       console.error("Error updating service: ", error);
     }
   };
 
   return (
-    <div className="px-2 mt-10">
-      <h2 className="text-2xl font-bold">Enter a new service record</h2>
+    <div className="px-10 mt-10">
+      <h2>Add a service record</h2>
       <form onSubmit={handleSubmit} className="flex flex-row gap-2">
         <div className="flex flex-col gap-2">
           <p>Enter the type of service</p>
@@ -137,51 +155,63 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <p>Enter the cost</p>
+          <p>Enter the mileage at service</p>
           <input
-            type="number"
-          placeholder="Cost"
-          value={cost}
-            onChange={(e) => setCost(e.target.value)}
+            type="text"
+            placeholder="Mileage"
+            value={mileage}
+            onChange={(e) => setMileage(e.target.value)}
             className="border p-2 mb-2"
           />
         </div>
         <div className="flex flex-col gap-2">
-          <p>Enter the date of the service</p>
-          <div className="mb-10">
-            <DatePicker
+          <p>Enter the date of service</p>
+          <DatePicker
             selected={date}
             onChange={(date: Date | null) => setDate(date)}
             placeholderText="yyyy/mm/dd"
             dateFormat="yyyy/mm/dd"
-              className="p-2 border rounded-md"
-            />
-          </div>
+            className="p-2 border rounded-md"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p>Enter the cost</p>
+          <input
+            type="number"
+            placeholder="Cost"
+            value={cost}
+            onChange={(e) => setCost(e.target.value)}
+            className="border p-2 mb-2"
+          />
         </div>
         <div className="flex flex-col mt-8">
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2">Submit</button>
+          <button type="submit" className="bg-blue-500 text-white px-4 py-2">Submit Service Record</button>
         </div>
       </form>
 
       <h2>Service Records</h2>
       <table className="min-w-full border-collapse border border-gray-200">
-        <thead>
+        <thead className="bg-gray-100 text-left text-sm font-medium text-black uppercase">
           <tr>
-            <th>Type of Service</th>
-            <th>Cost</th>
-            <th>Service Date</th>
-            <th>Actions</th>
+            <th className="px-6 py-3">Type of Service</th>
+            <th className="px-6 py-3">Mileage</th>
+            <th className="px-6 py-3">Service Date</th>
+            <th className="px-6 py-3">Cost</th>
+            <th className="px-6 py-3">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white divide-y divide-gray-200">
           {records.map((record) => (
             <tr key={record.id}>
-              <td>{record.serviceType}</td>
-              <td>{record.cost}</td>
-              <td>{record.serviceDate ? new Date(record.serviceDate.seconds * 1000).toLocaleDateString() : "N/A"}</td>
-              <td>
-                <button onClick={() => handleDelete(record.id)}>Delete</button>
-                <button onClick={() => handleEdit(record.id)}>Edit</button>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.serviceType}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMileage}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {record.serviceDate ? new Date(record.serviceDate.seconds * 1000).toLocaleDateString() : "N/A"}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.cost}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-black flex flex-row gap-2">
+                <button onClick={() => handleDelete(record.id)} className="bg-red-500 text-white px-4 py-2 rounded">Delete</button>
+                <button onClick={() => handleEdit(record.id)} className="bg-blue-500 text-white px-4 py-2 rounded">Edit</button>
               </td>
             </tr>
           ))}
@@ -190,25 +220,34 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
 
       {editingRecord && (
         <div className="mt-4">
-          <h2>Edit Record</h2>
-          <form onSubmit={handleUpdate}>
-            <p>Edit the type of service</p>
-            <input
-              type="text"
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              className="border p-2 mb-2"
-            />
-            <p>Edit the cost</p>
-            <input
-              type="number"
-              value={editCost}
-              onChange={(e) => setEditCost(e.target.value)}
-              className="border p-2 mb-2"
-            />
-            <button type="submit" className="bg-blue-500 text-white px-4 py-2">
-              Update
-            </button>
+          <h2>Edit Service Record</h2>
+          <form onSubmit={handleUpdate} className="flex flex-row gap-2">
+            <div className="flex flex-col gap-2">
+              <p>Edit the type of service</p>
+              <input
+                type="text"
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="border p-2 mb-2"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p>Edit the cost</p>
+              <input
+                type="number"
+                value={editCost}
+                onChange={(e) => setEditCost(e.target.value)}
+                className="border p-2 mb-2"
+              />
+            </div>
+            <div className="flex flex-row gap-2 mt-8">
+              <button type="submit" className="bg-green-500 text-white px-4 py-2">
+                Update
+              </button>
+              <button onClick={() => setEditingRecord(null)} className="bg-yellow-500 text-white px-4 py-2">
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       )}
