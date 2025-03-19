@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
+import { useRouter } from 'next/router';
 
 // Props for VehicleRecords
 interface VehicleRecordsProps {
@@ -10,6 +11,7 @@ interface VehicleRecordsProps {
 }
 
 export default function VehicleRecords({ userId }: VehicleRecordsProps) {
+  const router = useRouter();
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
@@ -126,63 +128,86 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
     }
   };
 
+  const handleViewVehicle = (vehicleId: string) => {
+    router.push(`/vehicles/${vehicleId}`);
+  };
+
   return (
-    <div className="bg-red-600">
-      <h2>Enter your Vehicles information</h2>
-      <form onSubmit={handleSubmit}>
-        <p>Enter your Vehicle Make</p>
-        <input
-          type="text"
-          placeholder="Vehicle Make"
-          value={make}
-          onChange={(e) => setMake(e.target.value)}
-        />
-        <p>Enter your Vehicle Model</p>
-        <input
-          type="text"
+    <div className="px-10 mt-10">
+      <h2>Add a vehicle record</h2>
+      <form onSubmit={handleSubmit} className="flex flex-row gap-2">
+        <div className="flex flex-col gap-2">
+          <p>Enter your Vehicle Make</p>
+          <input
+            type="text"
+            placeholder="Vehicle Make"
+            value={make}
+            onChange={(e) => setMake(e.target.value)}
+            className="border p-2 mb-2"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p>Enter your Vehicle Model</p>
+          <input
+            type="text"
           placeholder="Vehicle Model"
           value={model}
           onChange={(e) => setModel(e.target.value)}
-        />
-        <p>Enter your Vehicle Year</p>
-        <input
-          type="text"
+            className="border p-2 mb-2"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p>Enter your Vehicle Year</p>
+          <input
+            type="text"
           placeholder="Vehicle Year"
           value={year}
           onChange={(e) => setYear(e.target.value)}
-        />
-        <p>Enter your Vehicle Mileage</p>
-        <input
-          type="text"
+            className="border p-2 mb-2"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p>Enter your Vehicle Mileage</p>
+          <input
+            type="text"
           placeholder="Vehicle Mileage"
           value={mileage}
           onChange={(e) => setMileage(e.target.value)}
-        />
-        <br />
-        <button type="submit">Submit Vehicle Record</button>
+            className="border p-2 mb-2"
+          />
+        </div>
+        <div className="flex flex-col mt-8">
+          <button type="submit" className="bg-blue-500 text-white px-4 py-2">Submit Vehicle Record</button>
+        </div>
       </form>
 
-      <h2>Vehicle Records</h2>
+      <h2>Your Vehicles</h2>
       <table className="min-w-full border-collapse border border-gray-200">
-        <thead>
+        <thead className="bg-gray-100 text-left text-sm font-medium text-black uppercase">
           <tr>
-            <th>Vehicle Make</th>
-            <th>Vehicle Model</th>
-            <th>Vehicle Year</th>
-            <th>Vehicle Mileage</th>
-            <th>Actions</th>
+            <th className="px-6 py-3">Vehicle Make</th>
+            <th className="px-6 py-3">Vehicle Model</th>
+            <th className="px-6 py-3">Vehicle Year</th>
+            <th className="px-6 py-3">Vehicle Mileage</th>
+            <th className="px-6 py-3">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white divide-y divide-gray-200">
           {vehicleRecords.map((record) => (
             <tr key={record.id}>
-              <td>{record.vehicleMake}</td>
-              <td>{record.vehicleModel}</td>
-              <td>{record.vehicleYear}</td>
-              <td>{record.vehicleMileage}</td>
-              <td>
-                <button onClick={() => handleDelete(record.id)}>Delete</button>
-                <button onClick={() => handleEdit(record.id)}>Edit</button>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMake}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleModel}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleYear}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMileage}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-black flex flex-row gap-2">
+                <button onClick={() => handleDelete(record.id)} className="bg-red-500 text-white px-4 py-2 rounded">Delete</button>
+                <button onClick={() => handleEdit(record.id)} className="bg-blue-500 text-white px-4 py-2 rounded">Edit</button>
+                <button 
+                  onClick={() => handleViewVehicle(record.id)}
+                  className="bg-green-500 text-white px-4 py-2 rounded"
+                >
+                  View
+                </button>
               </td>
             </tr>
           ))}
@@ -192,38 +217,51 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
       {editingVehicleRecord && (
         <div className="mt-4">
           <h2>Edit Vehicle Record</h2>
-          <form onSubmit={handleUpdate}>
-            <p>Edit Vehicle Make</p>
-            <input
-              type="text"
-              value={editMake}
-              onChange={(e) => setEditMake(e.target.value)}
-              className="border p-2 mb-2"
-            />
-            <p>Edit the Vehicle Model</p>
-            <input
-              type="text"
+          <form onSubmit={handleUpdate} className="flex flex-row gap-2">
+            <div className="flex flex-col gap-2">
+              <p>Edit Vehicle Make</p>
+              <input
+                type="text"
+                value={editMake}
+                onChange={(e) => setEditMake(e.target.value)}
+                className="border p-2 mb-2"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p>Edit the Vehicle Model</p>
+              <input
+                type="text"
               value={editModel}
               onChange={(e) => setEditModel(e.target.value)}
               className="border p-2 mb-2"
-            />
-            <p>Edit the Vehicle Year</p>
-            <input
-              type="text"
-              value={editYear}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p>Edit the Vehicle Year</p>
+              <input
+                type="text"
+                value={editYear}
               onChange={(e) => setEditYear(e.target.value)}
               className="border p-2 mb-2"
-            />
-            <p>Edit the Vehicle Mileage</p>
-            <input
-              type="text"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p>Edit the Vehicle Mileage</p>
+              <input
+                type="text"
               value={editMileage}
               onChange={(e) => setEditMileage(e.target.value)}
-              className="border p-2 mb-2"
-            />
-            <button type="submit" className="bg-blue-500 text-white px-4 py-2">
-              Update
-            </button>
+                className="border p-2 mb-2"
+              />
+            </div>
+            <div className="flex flex-row gap-2 mt-8">
+              <button type="submit" className="bg-green-500 text-white px-4 py-2">
+                Update
+              </button>
+              <button onClick={() => setEditingVehicleRecord(null)} className="bg-yellow-500 text-white px-4 py-2">
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       )}
