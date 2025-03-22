@@ -32,11 +32,16 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         const vehicleRecordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setVehicleRecords(vehicleRecordsData);
 
-        const numericIds = vehicleRecordsData
-          .map(record => parseInt(record.id))
-          .filter(id => !isNaN(id));
-        const highestId = Math.max(0, ...numericIds);
-        setNextId(highestId + 1);
+        // Get the highest vehicle number for this specific user
+        const userVehicleNumbers = vehicleRecordsData
+          .map(record => {
+            const [, vehicleNum] = record.id.split('_');
+            return parseInt(vehicleNum);
+          })
+          .filter(num => !isNaN(num));
+        
+        const highestNum = Math.max(0, ...userVehicleNumbers);
+        setNextId(highestNum + 1);
       }
     };
 
@@ -52,7 +57,9 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
     }
 
     try {
-      const docRef = doc(db, "Vehicle Records", nextId.toString());
+      // Create a unique ID combining user ID and vehicle number
+      const uniqueId = `${auth.currentUser?.uid}_${nextId}`;
+      const docRef = doc(db, "Vehicle Records", uniqueId);
       await setDoc(docRef, {
         userId: auth.currentUser?.uid,
         email: auth.currentUser?.email,

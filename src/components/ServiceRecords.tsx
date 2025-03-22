@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -20,8 +20,10 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
   const [editCost, setEditCost] = useState('');
   const [editDate, setEditDate] = useState<Date | null>(null);
   const [editingRecord, setEditingRecord] = useState<any>(null);
+  const [editMileage, setEditMileage] = useState('');
   const [records, setRecords] = useState<any[]>([]);
   const [mileage, setMileage] = useState('');
+  const [nextId, setNextId] = useState(1);
 
   const sortRecordsByDate = (records: any[]) => {
     return records.sort((a, b) => {
@@ -40,6 +42,18 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
         );
         const querySnapshot = await getDocs(q);
         const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Get the highest service number for this specific user
+        const userServiceNumbers = recordsData
+          .map(record => {
+            const [, serviceNum] = record.id.split('_');
+            return parseInt(serviceNum);
+          })
+          .filter(num => !isNaN(num));
+        
+        const highestNum = Math.max(0, ...userServiceNumbers);
+        setNextId(highestNum + 1);
+        
         setRecords(sortRecordsByDate(recordsData));
       }
     };
@@ -56,7 +70,10 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
     }
 
     try {
-      await addDoc(collection(db, "Service Records"), {
+      // Create a unique ID combining user ID and service number
+      const uniqueId = `${auth.currentUser?.uid}_${nextId}`;
+      const docRef = doc(db, "Service Records", uniqueId);
+      await setDoc(docRef, {
         userId: auth.currentUser?.uid,
         email: auth.currentUser?.email,
         dateCreated: new Date().toISOString(),
@@ -70,14 +87,12 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
       setCost('');
       setDate(null);
       setMileage('');
+      setNextId(nextId + 1);
+
       const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
       const querySnapshot = await getDocs(q);
       const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Sort records by service date (latest first)
-      const sortedRecords = sortRecordsByDate(recordsData);
-      
-      setRecords(sortedRecords);
+      setRecords(sortRecordsByDate(recordsData));
     } catch (error) {
       console.error("Error adding service: ", error);
     }
@@ -102,6 +117,8 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
         setEditingRecord(recordToEdit);
         setEditText(recordToEdit.serviceType);
         setEditCost(recordToEdit.cost.toString());
+        setEditDate(recordToEdit.serviceDate ? new Date(recordToEdit.serviceDate.seconds * 1000) : null);
+        setEditMileage(recordToEdit.vehicleMileage.toString());
       }
     } catch (error) {
       console.error("Error fetching record for edit: ", error);
@@ -126,6 +143,8 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
       setEditingRecord(null);
       setEditText('');
       setEditCost('');
+      setEditDate(null);
+      setEditMileage('');
 
       const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
       const querySnapshot = await getDocs(q);
@@ -157,10 +176,16 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
         <div className="flex flex-col gap-2">
           <p>Enter the mileage at service</p>
           <input
-            type="text"
+            type="number"
             placeholder="Mileage"
             value={mileage}
-            onChange={(e) => setMileage(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || !isNaN(Number(value))) {
+                setMileage(value);
+              }
+            }}
+            min={0}
             className="border p-2 mb-2"
           />
         </div>
@@ -169,8 +194,8 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
           <DatePicker
             selected={date}
             onChange={(date: Date | null) => setDate(date)}
-            placeholderText="yyyy/mm/dd"
-            dateFormat="yyyy/mm/dd"
+            placeholderText="mm/dd/yyyy"
+            dateFormat="MM/dd/yyyy"
             className="p-2 border rounded-md"
           />
         </div>
@@ -180,12 +205,24 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
             type="number"
             placeholder="Cost"
             value={cost}
-            onChange={(e) => setCost(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || !isNaN(Number(value))) {
+                setCost(value);
+              }
+            }}
+            min={0}
             className="border p-2 mb-2"
           />
         </div>
-        <div className="flex flex-col mt-8">
+        <div className="flex flex-row gap-2 mt-8">
           <button type="submit" className="bg-blue-500 text-white px-4 py-2">Submit Service Record</button>
+          <button onClick={() => {
+            setText('');
+            setCost('');
+            setDate(null);
+            setMileage('');
+          }} className="bg-red-500 text-white px-4 py-2">Clear</button>
         </div>
       </form>
 
@@ -202,7 +239,7 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {records.map((record) => (
-            <tr key={record.id}>
+            <tr key={record.id} className="hover:bg-gray-200">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.serviceType}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMileage}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
