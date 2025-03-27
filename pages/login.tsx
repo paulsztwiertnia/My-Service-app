@@ -63,10 +63,11 @@ const Login = () => {
         <button type="submit">Sign In with Email</button>
       </form> */}
 
-      <button onClick={SignInWithGoogle}>Sign In with Google</button>
+      
     </div>
-    <div className="bg-blue-500 min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex flex-col items-center justify-center">
       <h1 className="text-white">Login Page</h1>
+      <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={SignInWithGoogle}>Sign In with Google</button>
     </div>
     </>
   );
