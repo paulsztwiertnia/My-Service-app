@@ -26,6 +26,7 @@ export default function NavBar() {
       {user ? (
         <>
           <Link className="px-4" href="/dashboard">Dashboard</Link>
+          <Link className="px-4" href="/account">Account</Link>
           <button className="px-4" onClick={() => auth.signOut()}>Sign Out</button>
         </>
       ) : (
