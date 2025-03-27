@@ -42,7 +42,7 @@ const SignUp = () => {
   };
 
   return (
-    <div>
+    <div className="flex flex-col items-center justify-center h-screen">
       {/* <form onSubmit={SignupWithEmail}>
         <input 
           type="email" 
@@ -59,7 +59,7 @@ const SignUp = () => {
         <button type="submit">Sign Up with Email</button>
       </form> */}
 
-      <button onClick={SignUpWithGoogle}>Sign Up with Google</button>
+      <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={SignUpWithGoogle}>Sign Up with Google</button>
     </div>
   );
 };
