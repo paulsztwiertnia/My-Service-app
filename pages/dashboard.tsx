@@ -29,11 +29,6 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, [router]);
 
-  // REPLACE WITH USE SUSPENSE
-  // Loading state while data is being fetched
-  // if (loading) {
-  //   return <p>Loading...</p>; // Display loading message
-  // }
 
   return (
     <div>
@@ -43,9 +38,6 @@ export default function Dashboard() {
           <div>
             <h1>Welcome, {user.email}</h1>
             {user.displayName && <h1>Name: {user.displayName.split(" ")[0]}</h1>}
-            <button onClick={() => auth.signOut()}>
-              Sign Out 
-            </button>
           </div>
         ) : (
           <p>Loading...</p>
