@@ -193,11 +193,11 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
           />
         </div>
         <div className="flex flex-col mt-8">
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2">Submit Vehicle Record</button>
+          <button type="submit" className="bg-blue-500 text-white px-4 py-2">Add Vehicle</button>
         </div>
       </form>
 
-      <h2>Your Vehicles</h2>
+      <h2>Your Vehicle {vehicleRecords.length === 1 ? "" : "s"}</h2>
       <table className="min-w-full border-collapse border border-gray-200">
         <thead className="bg-gray-100 text-left text-sm font-medium text-black uppercase">
           <tr>
@@ -210,7 +210,7 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {vehicleRecords.map((record) => (
-            <tr key={record.id}>
+            <tr key={record.id} className="hover:bg-gray-200">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMake}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleModel}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleYear}</td>
