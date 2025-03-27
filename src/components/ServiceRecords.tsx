@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { CalendarComponent } from "./calendar";
 
 // Props for ServiceRecords 
 interface ServiceRecordsProps {
@@ -191,12 +190,9 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
         </div>
         <div className="flex flex-col gap-2">
           <p>Enter the date of service</p>
-          <DatePicker
-            selected={date}
-            onChange={(date: Date | null) => setDate(date)}
-            placeholderText="mm/dd/yyyy"
-            dateFormat="MM/dd/yyyy"
-            className="p-2 border rounded-md"
+          <CalendarComponent 
+            date={date} 
+            onSelect={(selectedDate) => setDate(selectedDate || null)} 
           />
         </div>
         <div className="flex flex-col gap-2">
