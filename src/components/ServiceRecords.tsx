@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
 import { CalendarComponent } from "./calendar";
+import { ServiceModal } from './ServiceModal';
 
 // Props for ServiceRecords 
 interface ServiceRecordsProps {
@@ -23,6 +24,15 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
   const [records, setRecords] = useState<any[]>([]);
   const [mileage, setMileage] = useState('');
   const [nextId, setNextId] = useState(1);
+  const [modal, setModal] = useState<{ 
+    show: boolean; 
+    id: string | null; 
+    mode: 'delete' | 'edit' 
+  }>({ 
+    show: false, 
+    id: null, 
+    mode: 'delete' 
+  });
 
   const sortRecordsByDate = (records: any[]) => {
     return records.sort((a, b) => {
@@ -158,6 +168,44 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
     }
   };
 
+  const handleDeleteModal = (id: string) => {
+    setModal({ show: true, id, mode: 'delete' });
+  };
+
+  const handleEditModal = (id: string) => {
+    setModal({ show: true, id, mode: 'edit' });
+  };
+
+  const handleModalDelete = (id: string) => {
+    handleDelete(id);
+    setModal({ show: false, id: null, mode: 'delete' });
+  };
+
+  const handleModalEdit = async (id: string, updates: { 
+    serviceType: string; 
+    cost: number;
+    serviceDate: Date;
+    vehicleMileage: number;
+  }) => {
+    try {
+      const recordRef = doc(db, "Service Records", id);
+      await updateDoc(recordRef, updates);
+      
+      const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
+      const querySnapshot = await getDocs(q);
+      const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setRecords(sortRecordsByDate(recordsData));
+      
+      setModal({ show: false, id: null, mode: 'edit' });
+    } catch (error) {
+      console.error("Error updating service: ", error);
+    }
+  };
+
+  const handleModalCancel = () => {
+    setModal({ show: false, id: null, mode: 'delete' });
+  };
+
   return (
     <div className="px-10 mt-10">
       <h2>Add a service record</h2>
@@ -185,7 +233,7 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
               }
             }}
             min={0}
-            className="border p-2 mb-2"
+            className="border p-2"
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -208,7 +256,7 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
               }
             }}
             min={0}
-            className="border p-2 mb-2"
+            className="border p-2"
           />
         </div>
         <div className="flex flex-row gap-2 mt-8">
@@ -243,46 +291,33 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.cost}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-black flex flex-row gap-2">
-                <button onClick={() => handleDelete(record.id)} className="bg-red-500 text-white px-4 py-2 rounded">Delete</button>
-                <button onClick={() => handleEdit(record.id)} className="bg-blue-500 text-white px-4 py-2 rounded">Edit</button>
+                <button 
+                  onClick={() => handleDeleteModal(record.id)} 
+                  className="bg-red-500 text-white px-4 py-2 rounded"
+                >
+                  Delete
+                </button>
+                <button 
+                  onClick={() => handleEditModal(record.id)} 
+                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                >
+                  Edit
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {editingRecord && (
-        <div className="mt-4">
-          <h2>Edit Service Record</h2>
-          <form onSubmit={handleUpdate} className="flex flex-row gap-2">
-            <div className="flex flex-col gap-2">
-              <p>Edit the type of service</p>
-              <input
-                type="text"
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="border p-2 mb-2"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <p>Edit the cost</p>
-              <input
-                type="number"
-                value={editCost}
-                onChange={(e) => setEditCost(e.target.value)}
-                className="border p-2 mb-2"
-              />
-            </div>
-            <div className="flex flex-row gap-2 mt-8">
-              <button type="submit" className="bg-green-500 text-white px-4 py-2">
-                Update
-              </button>
-              <button onClick={() => setEditingRecord(null)} className="bg-yellow-500 text-white px-4 py-2">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+      {modal.show && (
+        <ServiceModal 
+          show={modal.show}
+          mode={modal.mode}
+          record={records.find(record => record.id === modal.id)}
+          onDelete={handleModalDelete}
+          onEdit={handleModalEdit}
+          onCancel={handleModalCancel}
+        />
       )}
     </div>
   );
