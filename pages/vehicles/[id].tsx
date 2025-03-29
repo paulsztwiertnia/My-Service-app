@@ -94,13 +94,11 @@ export default function VehiclePage() {
   return (
     <div>
       <NavBar />
-      <div className="mx-auto p-4">
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-4">
+      <div className="mx-auto p-6">
+          <h1 className="text-2xl font-bold mb-4 ms-2">
             {vehicle.vehicleYear} {vehicle.vehicleMake} {vehicle.vehicleModel}
           </h1>
-          <span className="text-gray-500 text-sm">Mileage: {vehicle.vehicleMileage}</span>
-        </div>
+          <span className="text-gray-500 text-sm ms-2">Mileage: {vehicle.vehicleMileage}</span>
 
         <div className="bg-white shadow-lg rounded-lg p-6">
           <h2 className="text-xl font-bold mb-4">Service History</h2>
