@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
 import { useRouter } from 'next/router';
+import { VehicleModal } from "./VehicleModal";
 
 // Props for VehicleRecords
 interface VehicleRecordsProps {
@@ -16,13 +17,20 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
   const [mileage, setMileage] = useState('');
-  const [editMake, setEditMake] = useState('');
-  const [editModel, setEditModel] = useState('');
-  const [editYear, setEditYear] = useState('');
-  const [editMileage, setEditMileage] = useState('');
-  const [editingVehicleRecord, setEditingVehicleRecord] = useState<any>(null);
   const [vehicleRecords, setVehicleRecords] = useState<any[]>([]);
   const [nextId, setNextId] = useState(1);
+  const [modal, setModal] = useState<{ 
+    show: boolean; 
+    id: string | null; 
+    mode: 'delete' | 'edit' 
+  }>({ 
+    show: false, 
+    id: null, 
+    mode: 'delete' 
+  });
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: currentYear - 1769 + 1 }, (_, i) => i + 1769);
 
   useEffect(() => {
     const fetchVehicleRecords = async () => {
@@ -97,51 +105,42 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
     }
   };
 
-  const handleEdit = async (id: string) => {
-    try {
-      const vehicleRecordToEdit = vehicleRecords.find(record => record.id === id);
-      if (vehicleRecordToEdit) {
-        setEditingVehicleRecord(vehicleRecordToEdit);
-        setEditMake(vehicleRecordToEdit.vehicleMake);
-        setEditModel(vehicleRecordToEdit.vehicleModel);
-        setEditYear(vehicleRecordToEdit.vehicleYear);
-        setEditMileage(vehicleRecordToEdit.vehicleMileage);
-      }
-    } catch (error) {
-      console.error("Error fetching record for edit: ", error);
-    }
+  const handleDeleteModal = (id: string) => {
+    setModal({ show: true, id, mode: 'delete' });
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEditModal = (id: string) => {
+    setModal({ show: true, id, mode: 'edit' });
+  };
 
-    if (!editingVehicleRecord) {
-      console.log("No vehicle record is being edited.");
-      return;
-    }
+  const handleModalDelete = async (id: string) => {
+    await handleDelete(id);
+    setModal({ show: false, id: null, mode: 'delete' });
+  };
 
+  const handleModalEdit = async (id: string, updates: {
+    vehicleMake: string;
+    vehicleModel: string;
+    vehicleYear: number;
+    vehicleMileage: number;
+  }) => {
     try {
-      const recordRef = doc(db, "Vehicle Records", editingVehicleRecord.id);
-      await updateDoc(recordRef, {
-        vehicleMake: editMake,
-        vehicleModel: editModel,
-        vehicleYear: editYear,
-        vehicleMileage: editMileage,
-      });
-
-      setEditingVehicleRecord(null);
-      setEditMake('');
-      setEditModel('');
-      setEditYear('');
-      setEditMileage('');
-
+      const recordRef = doc(db, "Vehicle Records", id);
+      await updateDoc(recordRef, updates);
+      
       const q = query(collection(db, "Vehicle Records"), where("userId", "==", auth.currentUser?.uid));
       const querySnapshot = await getDocs(q);
       const vehicleRecordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setVehicleRecords(vehicleRecordsData);
+      
+      setModal({ show: false, id: null, mode: 'edit' });
     } catch (error) {
       console.error("Error updating vehicle record: ", error);
     }
+  };
+
+  const handleModalCancel = () => {
+    setModal({ show: false, id: null, mode: 'delete' });
   };
 
   const handleViewVehicle = (vehicleId: string) => {
@@ -175,7 +174,7 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         <div className="flex flex-col gap-2">
           <p>Enter your Vehicle Year</p>
           <input
-            type="text"
+            type="number"
           placeholder="Vehicle Year"
           value={year}
           onChange={(e) => setYear(e.target.value)}
@@ -216,8 +215,18 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleYear}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMileage}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-black flex flex-row gap-2">
-                <button onClick={() => handleDelete(record.id)} className="bg-red-500 text-white px-4 py-2 rounded">Delete</button>
-                <button onClick={() => handleEdit(record.id)} className="bg-blue-500 text-white px-4 py-2 rounded">Edit</button>
+                <button 
+                  onClick={() => handleDeleteModal(record.id)} 
+                  className="bg-red-500 text-white px-4 py-2 rounded"
+                >
+                  Delete
+                </button>
+                <button 
+                  onClick={() => handleEditModal(record.id)} 
+                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                >
+                  Edit
+                </button>
                 <button 
                   onClick={() => handleViewVehicle(record.id)}
                   className="bg-green-500 text-white px-4 py-2 rounded"
@@ -230,56 +239,15 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         </tbody>
       </table>
 
-      {editingVehicleRecord && (
-        <div className="mt-4">
-          <h2>Edit Vehicle Record</h2>
-          <form onSubmit={handleUpdate} className="flex flex-row gap-2">
-            <div className="flex flex-col gap-2">
-              <p>Edit Vehicle Make</p>
-              <input
-                type="text"
-                value={editMake}
-                onChange={(e) => setEditMake(e.target.value)}
-                className="border p-2 mb-2"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <p>Edit the Vehicle Model</p>
-              <input
-                type="text"
-              value={editModel}
-              onChange={(e) => setEditModel(e.target.value)}
-              className="border p-2 mb-2"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <p>Edit the Vehicle Year</p>
-              <input
-                type="text"
-                value={editYear}
-              onChange={(e) => setEditYear(e.target.value)}
-              className="border p-2 mb-2"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <p>Edit the Vehicle Mileage</p>
-              <input
-                type="text"
-              value={editMileage}
-              onChange={(e) => setEditMileage(e.target.value)}
-                className="border p-2 mb-2"
-              />
-            </div>
-            <div className="flex flex-row gap-2 mt-8">
-              <button type="submit" className="bg-green-500 text-white px-4 py-2">
-                Update
-              </button>
-              <button onClick={() => setEditingVehicleRecord(null)} className="bg-yellow-500 text-white px-4 py-2">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+      {modal.show && (
+        <VehicleModal 
+          show={modal.show}
+          mode={modal.mode}
+          record={vehicleRecords.find(record => record.id === modal.id)}
+          onDelete={handleModalDelete}
+          onEdit={handleModalEdit}
+          onCancel={handleModalCancel}
+        />
       )}
     </div>
   );
