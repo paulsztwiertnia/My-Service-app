@@ -17,21 +17,27 @@ export default function NavBar() {
   }, [auth]);
 
   return (
-    <nav>
-      <Link href="/signup">
-        <Image src="/drive-wise-website-logo.png" alt="logo" width={200} height={150} />
-      </Link>
+    <nav >
+      <div className="flex flex-row justify-between gap-2">
+        <div>
+        <Link href="/signup">
+          <Image src="/drive-wise-website-logo.png" alt="logo" width={200} height={150} />
+        </Link>
+        </div>
       
-      <Link className="px-4" href="/">Home</Link>
-      {user ? (
-        <>
-          <Link className="px-4" href="/dashboard">Dashboard</Link>
-          <Link className="px-4" href="/account">Account</Link>
-          <button className="px-4" onClick={() => auth.signOut()}>Sign Out</button>
-        </>
-      ) : (
-        <Link className="px-4" href="/auth/login">Sign In</Link>
-      )}
+        <div>
+          <Link className="px-4" href="/">Home</Link>
+          {user ? (
+            <>
+              <Link className="px-4" href="/dashboard">Dashboard</Link>
+              <Link className="px-4" href="/account">Account</Link>
+              <button className="px-4" onClick={() => auth.signOut()}>Sign Out</button>
+            </>
+          ) : (
+              <Link className="px-4" href="/auth/login">Sign In</Link>
+            )}
+        </div>
+      </div>
     </nav>
   );
 }
