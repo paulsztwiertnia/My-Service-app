@@ -3,7 +3,7 @@ import { onAuthStateChanged } from "firebase/auth"; // Import for checking auth 
 import { useRouter } from "next/router"; // Router hook from Next.js for navigation
 import { auth } from "../firebase/firebase-config"; // Firebase config for auth
 import NavBar from "../src/components/NavBar"; // Navbar component for layout
-import ServiceRecords from "../src/components/ServiceRecords";
+//import ServiceRecords from "../src/components/ServiceRecords";
 import VehicleRecords from "../src/components/VehicleRecords";
 
 export default function Dashboard() {
@@ -32,23 +32,13 @@ export default function Dashboard() {
 
   return (
     <div>
-      <NavBar /> {/* Navbar component */}
-      <div>
-        {user ? (
-          <div>
-            <h1>Welcome, {user.email}</h1>
-            {user.displayName && <h1>Name: {user.displayName.split(" ")[0]}</h1>}
-          </div>
-        ) : (
-          <p>Loading...</p>
-        )}
+      <div className="">
+        <NavBar />
       </div>
       
-      {/* if user object exists then show vehicle records */}
-      {user && <VehicleRecords userId={user.uid} />}
-
-      {/* if user object exists with more than 0 vehicle then show service records */}
-      {/* {user && <ServiceRecords userId={user.uid} />} */}
+      <div className="flex flex-col justify-center items-center mx-10 mt-10">
+        {user && <VehicleRecords userId={user.uid} />}
+      </div>
     </div>
   );
 }
