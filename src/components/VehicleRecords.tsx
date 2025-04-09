@@ -148,7 +148,7 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
   };
 
   return (
-    <div className="px-10 mt-10">
+    <div className="flex flex-col mt-10">
       <h2>Add a vehicle record</h2>
       <form onSubmit={handleSubmit} className="flex flex-row gap-2">
         <div className="flex flex-col gap-2">
@@ -197,7 +197,7 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
       </form>
 
       <h2>Your Vehicle {vehicleRecords.length === 1 ? "" : "s"}</h2>
-      <table className="min-w-full border-collapse border border-gray-200">
+      <table className="max-w-6xl border-collapse border border-gray-200">
         <thead className="bg-gray-100 text-left text-sm font-medium text-black uppercase">
           <tr>
             <th className="px-6 py-3">Vehicle Make</th>
@@ -209,27 +209,27 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {vehicleRecords.map((record) => (
-            <tr key={record.id} className="hover:bg-gray-200">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMake}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleModel}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleYear}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMileage}</td>
+            <tr key={record.id} className="hover:bg-gray-50">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.vehicleMake}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.vehicleModel}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.vehicleYear}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.vehicleMileage}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-black flex flex-row gap-2">
                 <button 
                   onClick={() => handleDeleteModal(record.id)} 
-                  className="bg-red-500 text-white px-4 py-2 rounded"
+                  className="delete-button"
                 >
                   Delete
                 </button>
                 <button 
                   onClick={() => handleEditModal(record.id)} 
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                  className="edit-button"
                 >
                   Edit
                 </button>
                 <button 
                   onClick={() => handleViewVehicle(record.id)}
-                  className="bg-green-500 text-white px-4 py-2 rounded"
+                  className="view-button"
                 >
                   View
                 </button>
