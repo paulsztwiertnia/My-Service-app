@@ -3,6 +3,12 @@ interface VehicleMake {
   MakeName: string;
 }
 
+interface NHTSAResponse {
+  Count: number;
+  Message: string;
+  Results: VehicleMake[];
+}
+
 const commonMakeIds = [
   448, // TOYOTA
   474, // HONDA
@@ -76,17 +82,11 @@ export async function getMake(): Promise<VehicleMake[]> {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
-
-    // Find excluded makes
-    const excludedMakes = data.Results.filter(
-      (make: VehicleMake) => !commonMakeIds.includes(make.MakeId)
-    );
-    console.log("Excluded makes:", excludedMakes);
-
-    const sortedAlphaMakes = data.Results.sort((a: VehicleMake, b: VehicleMake) => a.MakeName.localeCompare(b.MakeName));
-
-    return sortedAlphaMakes.filter((make: VehicleMake) => commonMakeIds.includes(make.MakeId));
+    const data: NHTSAResponse = await response.json();
+    
+    return data.Results
+      .filter((make: VehicleMake) => commonMakeIds.includes(make.MakeId))
+      .sort((a: VehicleMake, b: VehicleMake) => a.MakeName.localeCompare(b.MakeName));
   } catch (error) {
     console.error(`Error fetching vehicle makes: ${error}`);
     throw error;
