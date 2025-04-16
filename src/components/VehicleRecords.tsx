@@ -5,8 +5,24 @@ import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc, s
 import { auth, db } from "../../firebase/firebase-config";
 import { useRouter } from 'next/router';
 import { VehicleModal } from "./VehicleModal";
+import { getMake } from "../../pages/utils/getMake";
+import getMakeModel from "../../pages/utils/getMakeModel";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CircularProgress from '@mui/material/CircularProgress';
 
-// Props for VehicleRecords
+interface VehicleMake {
+  MakeId: number;
+  MakeName: string;
+}
+
+interface VehicleModel {
+  Make_ID: number;
+  Make_Name: string;
+  Model_ID: number;
+  Model_Name: string;
+}
+
 interface VehicleRecordsProps {
   userId?: string;
 }
@@ -28,8 +44,22 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
     id: null, 
     mode: 'delete' 
   });
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedMake, setSelectedMake] = useState("");
+  const [models, setModels] = useState<VehicleModel[]>([]);
+  const [modelsOpen, setModelsOpen] = useState(false);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+
+  const [makes, setMakes] = useState<VehicleMake[]>([]);
+
+  useEffect(() => {
+    getMake()
+      .then((data) => setMakes(data))
+      .catch((err) => console.error(err));
+  }, []);
 
   const currentYear = new Date().getFullYear();
+  
   const yearOptions = Array.from({ length: currentYear - 1769 + 1 }, (_, i) => i + 1769);
 
   useEffect(() => {
@@ -147,32 +177,97 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
     router.push(`/vehicles/${vehicleId}`);
   };
 
+  const fetchModels = async (make: string) => {
+    if (!make) return;
+    setIsLoadingModels(true);
+    try {
+      const modelData = await getMakeModel(make);
+      setModels(modelData);
+      setModelsOpen(true);
+    } catch (error) {
+      console.error("Error fetching models:", error);
+      setModels([]);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col mt-10">
+    <div className="flex flex-col mt-10"> 
       <h2>Add a vehicle record</h2>
-      <form onSubmit={handleSubmit} className="flex flex-row gap-2">
+      <form onSubmit={handleSubmit} className="flex flex-row gap-2 pb-6">
         <div className="flex flex-col gap-2">
-          <p>Enter your Vehicle Make</p>
-          <input
-            type="text"
-            placeholder="Vehicle Make"
-            value={make}
-            onChange={(e) => setMake(e.target.value)}
-            className="border p-2 mb-2"
-          />
+          <div className="relative">
+            
+            <button 
+              type="button"
+              className="px-4 py-2 text-left border text-slate-400 w-[200px] flex flex-row justify-between"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              <p className="text-md text-gray-600">{selectedMake || "Select make"}</p>
+              {isOpen ? <ExpandLessIcon sx={{ fontSize: '24px' }} /> : <ExpandMoreIcon sx={{ fontSize: '24px' }} />}
+            </button>
+            
+            {isOpen && (
+              <div className="absolute z-10 w-[200px] mt-1 bg-white border rounded-md shadow-lg max-h-96 overflow-y-auto">
+                <ul>
+                  {makes.map((make, index) => (
+                    <div
+                      key={index}
+                      className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedMake(make.MakeName);
+                        setMake(make.MakeName);
+                        setModel('');
+                        setModels([]);
+                        setModelsOpen(false);
+                        fetchModels(make.MakeName);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <p className="text-md text-gray-600">{make.MakeName}</p>
+                    </div>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          
         </div>
         <div className="flex flex-col gap-2">
-          <p>Enter your Vehicle Model</p>
-          <input
-            type="text"
-          placeholder="Vehicle Model"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-            className="border p-2 mb-2"
-          />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setModelsOpen(!modelsOpen)}
+              className="px-4 py-2 text-left border text-slate-400 w-[200px] flex flex-row justify-between"
+              disabled={isLoadingModels || !selectedMake}
+            >
+              <p className="text-md text-gray-600">{isLoadingModels 
+                ? <CircularProgress size={12} />
+                : model || "Select a model"}</p>
+              {isLoadingModels ? <ExpandMoreIcon sx={{ fontSize: '24px' }} /> : <ExpandLessIcon sx={{ fontSize: '24px' }} />}
+            </button>
+            
+            {modelsOpen && models.length > 0 && (
+              <div className="absolute z-10 w-[200px] mt-1 bg-white border rounded-md shadow-lg max-h-64 overflow-y-auto">
+                {models.map((modelItem: VehicleModel, index) => (
+                  <div
+                    key={modelItem.Model_ID}
+                    className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                    onClick={() => {
+                      setModel(modelItem.Model_Name);
+                      setModelsOpen(false);
+                    }}
+                  >
+                    <p className="text-md text-gray-600">{modelItem.Model_Name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+        
         <div className="flex flex-col gap-2">
-          <p>Enter your Vehicle Year</p>
           <input
             type="number"
           placeholder="Vehicle Year"
@@ -182,22 +277,21 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <p>Enter your Vehicle Mileage</p>
           <input
             type="text"
-          placeholder="Vehicle Mileage"
-          value={mileage}
-          onChange={(e) => setMileage(e.target.value)}
+            placeholder="Vehicle Mileage"
+            value={mileage}
+            onChange={(e) => setMileage(e.target.value)}
             className="border p-2 mb-2"
           />
         </div>
         <div className="flex flex-col mt-8">
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2">Add Vehicle</button>
+          <button type="submit" className="blue-button-2">Add Vehicle</button>
         </div>
       </form>
 
-      <h2>Your Vehicle {vehicleRecords.length === 1 ? "" : "s"}</h2>
-      <table className="max-w-6xl border-collapse border border-gray-200">
+      <h2>Your Vehicle{vehicleRecords.length === 1 ? "" : "s"}</h2>
+      <table className="max-w-6xl border-collapse border border-gray-200 mt-2">
         <thead className="bg-gray-100 text-left text-sm font-medium text-black uppercase">
           <tr>
             <th className="px-6 py-3">Vehicle Make</th>
@@ -217,19 +311,19 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-black flex flex-row gap-2">
                 <button 
                   onClick={() => handleDeleteModal(record.id)} 
-                  className="delete-button"
+                  className="red-button"
                 >
                   Delete
                 </button>
                 <button 
                   onClick={() => handleEditModal(record.id)} 
-                  className="edit-button"
+                  className="blue-button"
                 >
                   Edit
                 </button>
                 <button 
                   onClick={() => handleViewVehicle(record.id)}
-                  className="view-button"
+                  className="green-button"
                 >
                   View
                 </button>
