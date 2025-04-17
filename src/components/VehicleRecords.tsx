@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
 import { useRouter } from 'next/router';
 import { VehicleModal } from "./VehicleModal";
@@ -34,7 +34,6 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
   const [year, setYear] = useState('');
   const [mileage, setMileage] = useState('');
   const [vehicleRecords, setVehicleRecords] = useState<any[]>([]);
-  const [nextId, setNextId] = useState(1);
   const [modal, setModal] = useState<{ 
     show: boolean; 
     id: string | null; 
@@ -49,8 +48,16 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
   const [models, setModels] = useState<VehicleModel[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
-
   const [makes, setMakes] = useState<VehicleMake[]>([]);
+
+  const currentYear = new Date().getFullYear();
+  const minYear = 1769;
+  const maxYear = currentYear + 1;
+
+  const validateYear = (value: string): boolean => {
+    const yearNum = parseInt(value);
+    return !isNaN(yearNum) && yearNum >= minYear && yearNum <= maxYear;
+  };
 
   useEffect(() => {
     getMake()
@@ -58,28 +65,13 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
       .catch((err) => console.error(err));
   }, []);
 
-  const currentYear = new Date().getFullYear();
-  
-  const yearOptions = Array.from({ length: currentYear - 1769 + 1 }, (_, i) => i + 1769);
-
   useEffect(() => {
     const fetchVehicleRecords = async () => {
       if (auth.currentUser) {
-        const q = query(collection(db, "Vehicle Records"), where("userId", "==", auth.currentUser.uid));
-        const querySnapshot = await getDocs(q);
+        const vehiclesRef = collection(db, `users/${auth.currentUser.uid}/vehicles`);
+        const querySnapshot = await getDocs(vehiclesRef);
         const vehicleRecordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setVehicleRecords(vehicleRecordsData);
-
-        // Get the highest vehicle number for this specific user
-        const userVehicleNumbers = vehicleRecordsData
-          .map(record => {
-            const [, vehicleNum] = record.id.split('_');
-            return parseInt(vehicleNum);
-          })
-          .filter(num => !isNaN(num));
-        
-        const highestNum = Math.max(0, ...userVehicleNumbers);
-        setNextId(highestNum + 1);
       }
     };
 
@@ -94,28 +86,28 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
       return;
     }
 
+    if (!validateYear(year)) {
+      console.log(`Vehicle year must be between ${minYear} and ${maxYear}`);
+      return;
+    }
+
     try {
-      // Create a unique ID combining user ID and vehicle number
-      const uniqueId = `${auth.currentUser?.uid}_${nextId}`;
-      const docRef = doc(db, "Vehicle Records", uniqueId);
+      const vehiclesRef = collection(db, `users/${auth.currentUser?.uid}/vehicles`);
+      const docRef = doc(vehiclesRef);
       await setDoc(docRef, {
-        userId: auth.currentUser?.uid,
-        email: auth.currentUser?.email,
-        dateCreated: new Date().toISOString(),
-        vehicleMake: make,
-        vehicleModel: model,
-        vehicleYear: year,
-        vehicleMileage: mileage,
+        make: make,
+        model: model,
+        year: year,
+        mileage: mileage,
+        dateAdded: new Date()
       });
 
       setMake('');
       setModel('');
       setYear('');
       setMileage('');
-      setNextId(nextId + 1);
 
-      const q = query(collection(db, "Vehicle Records"), where("userId", "==", auth.currentUser?.uid));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getDocs(vehiclesRef);
       const vehicleRecordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setVehicleRecords(vehicleRecordsData);
     } catch (error) {
@@ -125,9 +117,9 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteDoc(doc(db, "Vehicle Records", id));
-      const q = query(collection(db, "Vehicle Records"), where("userId", "==", auth.currentUser?.uid));
-      const querySnapshot = await getDocs(q);
+      await deleteDoc(doc(db, `users/${auth.currentUser?.uid}/vehicles/${id}`));
+      const vehiclesRef = collection(db, `users/${auth.currentUser?.uid}/vehicles`);
+      const querySnapshot = await getDocs(vehiclesRef);
       const vehicleRecordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setVehicleRecords(vehicleRecordsData);
     } catch (error) {
@@ -155,11 +147,16 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
     vehicleMileage: number;
   }) => {
     try {
-      const recordRef = doc(db, "Vehicle Records", id);
-      await updateDoc(recordRef, updates);
+      const recordRef = doc(db, `users/${auth.currentUser?.uid}/vehicles/${id}`);
+      await updateDoc(recordRef, {
+        make: updates.vehicleMake,
+        model: updates.vehicleModel,
+        year: updates.vehicleYear,
+        mileage: updates.vehicleMileage
+      });
       
-      const q = query(collection(db, "Vehicle Records"), where("userId", "==", auth.currentUser?.uid));
-      const querySnapshot = await getDocs(q);
+      const vehiclesRef = collection(db, `users/${auth.currentUser?.uid}/vehicles`);
+      const querySnapshot = await getDocs(vehiclesRef);
       const vehicleRecordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setVehicleRecords(vehicleRecordsData);
       
@@ -236,17 +233,26 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         </div>
         <div className="flex flex-col gap-2">
           <div className="relative">
+
             <button
               type="button"
               onClick={() => setModelsOpen(!modelsOpen)}
               className="px-4 py-2 text-left border text-slate-400 w-[200px] flex flex-row justify-between"
               disabled={isLoadingModels || !selectedMake}
             >
+            { selectedMake && (
               <p className="text-md text-gray-600">{isLoadingModels 
                 ? <CircularProgress size={12} />
-                : model || "Select a model"}</p>
-              {isLoadingModels ? <ExpandMoreIcon sx={{ fontSize: '24px' }} /> : <ExpandLessIcon sx={{ fontSize: '24px' }} />}
+                : model || "Select a model"}
+              </p>
+
+            )}
+            { !selectedMake && (
+              <p className="text-md text-gray-600 cursor-not-allowed">Select a make</p>
+            )}
+              { modelsOpen ? <ExpandLessIcon sx={{ fontSize: '24px' }} /> : <ExpandMoreIcon sx={{ fontSize: '24px' }} />}
             </button>
+            
             
             {modelsOpen && models.length > 0 && (
               <div className="absolute z-10 w-[200px] mt-1 bg-white border rounded-md shadow-lg max-h-64 overflow-y-auto">
@@ -260,6 +266,7 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
                     }}
                   >
                     <p className="text-md text-gray-600">{modelItem.Model_Name}</p>
+                    
                   </div>
                 ))}
               </div>
@@ -270,10 +277,19 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         <div className="flex flex-col gap-2">
           <input
             type="number"
-          placeholder="Vehicle Year"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-            className="border p-2 mb-2"
+            placeholder="Vehicle Year"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            min={minYear}
+            max={maxYear}
+            onBlur={(e) => {
+              const value = e.target.value;
+              if (value && !validateYear(value)) {
+                alert(`Please enter a year between ${minYear} and ${maxYear}`);
+                setYear('');
+              }
+            }}
+            className="border p-2 mb-2 w-[200px]" 
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -304,10 +320,10 @@ export default function VehicleRecords({ userId }: VehicleRecordsProps) {
         <tbody className="bg-white divide-y divide-gray-200">
           {vehicleRecords.map((record) => (
             <tr key={record.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.vehicleMake}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.vehicleModel}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.vehicleYear}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.vehicleMileage}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.make}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.model}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.year}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.mileage}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-black flex flex-row gap-2">
                 <button 
                   onClick={() => handleDeleteModal(record.id)} 

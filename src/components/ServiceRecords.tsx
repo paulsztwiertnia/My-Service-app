@@ -1,29 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, query, where, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
 import { CalendarComponent } from "./calendar";
 import { ServiceModal } from './ServiceModal';
 
-// Props for ServiceRecords 
 interface ServiceRecordsProps {
-  userId?: string;
+  vehicleId: string;
 }
 
-export default function ServiceRecords({ userId }: ServiceRecordsProps) {
+export default function ServiceRecords({ vehicleId }: ServiceRecordsProps) {
   // States for service records
   const [text, setText] = useState('');
   const [cost, setCost] = useState('');
   const [date, setDate] = useState<Date | null>(null);
-  const [editText, setEditText] = useState('');
-  const [editCost, setEditCost] = useState('');
-  const [editDate, setEditDate] = useState<Date | null>(null);
-  const [editingRecord, setEditingRecord] = useState<any>(null);
-  const [editMileage, setEditMileage] = useState('');
   const [records, setRecords] = useState<any[]>([]);
   const [mileage, setMileage] = useState('');
-  const [nextId, setNextId] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<{ 
     show: boolean; 
     id: string | null; 
@@ -36,135 +30,76 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
 
   const sortRecordsByDate = (records: any[]) => {
     return records.sort((a, b) => {
-      const dateA = a.serviceDate?.seconds || 0;
-      const dateB = b.serviceDate?.seconds || 0;
+      const dateA = a.date?.seconds || 0;
+      const dateB = b.date?.seconds || 0;
       return dateB - dateA;
     });
   };
 
   useEffect(() => {
     const fetchRecords = async () => {
-      if (auth.currentUser) {
-        const q = query(
-          collection(db, "Service Records"), 
-          where("userId", "==", auth.currentUser.uid),
-        );
-        const querySnapshot = await getDocs(q);
+      if (!auth.currentUser) return;
+      
+      setLoading(true);
+      try {
+        const servicesRef = collection(db, `users/${auth.currentUser.uid}/vehicles/${vehicleId}/serviceRecords`);
+        const querySnapshot = await getDocs(servicesRef);
         const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Get the highest service number for this specific user
-        const userServiceNumbers = recordsData
-          .map(record => {
-            const [, serviceNum] = record.id.split('_');
-            return parseInt(serviceNum);
-          })
-          .filter(num => !isNaN(num));
-        
-        const highestNum = Math.max(0, ...userServiceNumbers);
-        setNextId(highestNum + 1);
-        
+        console.log('Fetched records:', recordsData);
         setRecords(sortRecordsByDate(recordsData));
+      } catch (error) {
+        console.error("Error fetching service records:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchRecords();
-  }, []);
+  }, [vehicleId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!text || !cost || !date) {
-      console.log("Please provide service type, cost, and date.");
+    if (!text || !cost || !date || !mileage) {
+      alert("Please provide all service details");
       return;
     }
 
     try {
-      // Create a unique ID combining user ID and service number
-      const uniqueId = `${auth.currentUser?.uid}_${nextId}`;
-      const docRef = doc(db, "Service Records", uniqueId);
-      await setDoc(docRef, {
-        userId: auth.currentUser?.uid,
-        email: auth.currentUser?.email,
-        dateCreated: new Date().toISOString(),
+      const servicesRef = collection(db, `users/${auth.currentUser?.uid}/vehicles/${vehicleId}/serviceRecords`);
+      await addDoc(servicesRef, {
+        type: text,
         cost: Number(cost),
-        serviceType: text,
-        serviceDate: date,
-        vehicleMileage: Number(mileage),
+        date: date,
+        mileage: Number(mileage),
+        dateCreated: new Date().toISOString()
       });
 
+      // Reset form
       setText('');
       setCost('');
       setDate(null);
       setMileage('');
-      setNextId(nextId + 1);
 
-      const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
-      const querySnapshot = await getDocs(q);
+      // Refresh records
+      const querySnapshot = await getDocs(servicesRef);
       const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRecords(sortRecordsByDate(recordsData));
     } catch (error) {
-      console.error("Error adding service: ", error);
+      console.error("Error adding service:", error);
+      alert("Failed to add service record. Please try again.");
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (!auth.currentUser) return;
+    
     try {
-      await deleteDoc(doc(db, "Service Records", id));
-      const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
-      const querySnapshot = await getDocs(q);
-      const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRecords(sortRecordsByDate(recordsData));
+      await deleteDoc(doc(db, `users/${auth.currentUser.uid}/vehicles/${vehicleId}/serviceRecords/${id}`));
+      setRecords(records.filter(record => record.id !== id));
     } catch (error) {
-      console.error("Error deleting service: ", error);
-    }
-  };
-
-  const handleEdit = async (id: string) => {
-    try {
-      const recordToEdit = records.find(record => record.id === id);
-      if (recordToEdit) {
-        setEditingRecord(recordToEdit);
-        setEditText(recordToEdit.serviceType);
-        setEditCost(recordToEdit.cost.toString());
-        setEditDate(recordToEdit.serviceDate ? new Date(recordToEdit.serviceDate.seconds * 1000) : null);
-        setEditMileage(recordToEdit.vehicleMileage.toString());
-      }
-    } catch (error) {
-      console.error("Error fetching record for edit: ", error);
-    }
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!editingRecord) {
-      console.log("No record is being edited.");
-      return;
-    }
-
-    try {
-      const recordRef = doc(db, "Service Records", editingRecord.id);
-      await updateDoc(recordRef, {
-        serviceType: editText,
-        cost: Number(editCost),
-      });
-
-      setEditingRecord(null);
-      setEditText('');
-      setEditCost('');
-      setEditDate(null);
-      setEditMileage('');
-
-      const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
-      const querySnapshot = await getDocs(q);
-      const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Sort records by service date (latest first)
-      const sortedRecords = sortRecordsByDate(recordsData);
-      
-      setRecords(sortedRecords);
-    } catch (error) {
-      console.error("Error updating service: ", error);
+      console.error("Error deleting service:", error);
+      alert("Failed to delete service record. Please try again.");
     }
   };
 
@@ -185,20 +120,26 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
     serviceType: string; 
     cost: number;
     serviceDate: Date;
-    vehicleMileage: number;
+    mileage: number;
   }) => {
+    if (!auth.currentUser) return;
+
     try {
-      const recordRef = doc(db, "Service Records", id);
+      const recordRef = doc(db, `users/${auth.currentUser.uid}/vehicles/${vehicleId}/serviceRecords/${id}`);
       await updateDoc(recordRef, updates);
       
-      const q = query(collection(db, "Service Records"), where("userId", "==", auth.currentUser?.uid));
-      const querySnapshot = await getDocs(q);
-      const recordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRecords(sortRecordsByDate(recordsData));
+      // Update local state
+      setRecords(prevRecords => {
+        const updatedRecords = prevRecords.map(record => 
+          record.id === id ? { ...record, ...updates } : record
+        );
+        return sortRecordsByDate(updatedRecords);
+      });
       
       setModal({ show: false, id: null, mode: 'edit' });
     } catch (error) {
-      console.error("Error updating service: ", error);
+      console.error("Error updating service:", error);
+      alert("Failed to update service record. Please try again.");
     }
   };
 
@@ -208,23 +149,24 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
 
   return (
     <div className="px-10 mt-10">
-      <h2>Add a service record</h2>
-      <form onSubmit={handleSubmit} className="flex flex-row gap-2">
+      <h2 className="text-2xl font-bold mb-6">Add a service record</h2>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="flex flex-col gap-2">
-          <p>Enter the type of service</p>
+          <label className="font-medium">Type of Service</label>
           <input
             type="text"
-            placeholder="Type of Service"
+            placeholder="Oil Change, Tire Rotation, etc."
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="border p-2 mb-2"
+            className="border rounded-md p-2"
           />
         </div>
+        
         <div className="flex flex-col gap-2">
-          <p>Enter the mileage at service</p>
+          <label className="font-medium">Mileage at Service</label>
           <input
             type="number"
-            placeholder="Mileage"
+            placeholder="Current Mileage"
             value={mileage}
             onChange={(e) => {
               const value = e.target.value;
@@ -233,21 +175,23 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
               }
             }}
             min={0}
-            className="border p-2"
+            className="border rounded-md p-2"
           />
         </div>
+
         <div className="flex flex-col gap-2">
-          <p>Enter the date of service</p>
+          <label className="font-medium">Service Date</label>
           <CalendarComponent 
             date={date} 
             onSelect={(selectedDate) => setDate(selectedDate || null)} 
           />
         </div>
+
         <div className="flex flex-col gap-2">
-          <p>Enter the cost</p>
+          <label className="font-medium">Cost</label>
           <input
             type="number"
-            placeholder="Cost"
+            placeholder="Service Cost"
             value={cost}
             onChange={(e) => {
               const value = e.target.value;
@@ -256,64 +200,97 @@ export default function ServiceRecords({ userId }: ServiceRecordsProps) {
               }
             }}
             min={0}
-            className="border p-2"
+            step="0.01"
+            className="border rounded-md p-2"
           />
         </div>
-        <div className="flex flex-row gap-2 mt-8">
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2">Submit Service Record</button>
-          <button onClick={() => {
-            setText('');
-            setCost('');
-            setDate(null);
-            setMileage('');
-          }} className="bg-red-500 text-white px-4 py-2">Clear</button>
+
+        <div className="col-span-full flex gap-2">
+          <button 
+            type="submit" 
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Add Service Record
+          </button>
+          <button 
+            type="button"
+            onClick={() => {
+              setText('');
+              setCost('');
+              setDate(null);
+              setMileage('');
+            }} 
+            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Clear Form
+          </button>
         </div>
       </form>
 
-      <h2>Service Records</h2>
-      <table className="min-w-full border-collapse border border-gray-200">
-        <thead className="bg-gray-100 text-left text-sm font-medium text-black uppercase">
-          <tr>
-            <th className="px-6 py-3">Type of Service</th>
-            <th className="px-6 py-3">Mileage</th>
-            <th className="px-6 py-3">Service Date</th>
-            <th className="px-6 py-3">Cost</th>
-            <th className="px-6 py-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {records.map((record) => (
-            <tr key={record.id} className="hover:bg-gray-200">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.serviceType}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.vehicleMileage}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {record.serviceDate ? new Date(record.serviceDate.seconds * 1000).toLocaleDateString() : "N/A"}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.cost}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-black flex flex-row gap-2">
-                <button 
-                  onClick={() => handleDeleteModal(record.id)} 
-                  className="bg-red-500 text-white px-4 py-2 rounded"
-                >
-                  Delete
-                </button>
-                <button 
-                  onClick={() => handleEditModal(record.id)} 
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                >
-                  Edit
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h2 className="text-2xl font-bold mb-4">Service History</h2>
+      {loading ? (
+        <div className="text-center py-4">Loading service records...</div>
+      ) : records.length === 0 ? (
+        <div className="text-center py-4 text-gray-500">No service records found</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse border border-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mileage</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {records.map((record) => (
+                <tr key={record.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {record.type || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {record.mileage?.toLocaleString() || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {record.date && record.date.toDate 
+                      ? record.date.toDate().toLocaleDateString()
+                      : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${record.cost?.toLocaleString(undefined, { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    }) || '0.00'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button 
+                      onClick={() => handleEditModal(record.id)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteModal(record.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {modal.show && (
         <ServiceModal 
           show={modal.show}
           mode={modal.mode}
           record={records.find(record => record.id === modal.id)}
+          vehicleId={vehicleId}
           onDelete={handleModalDelete}
           onEdit={handleModalEdit}
           onCancel={handleModalCancel}
