@@ -12,22 +12,20 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export function CalendarComponent({ 
-  date, 
-  onSelect 
-}: { 
-  date?: Date | null, 
-  onSelect?: (date: Date | undefined) => void 
-}) {
+interface CalendarComponentProps {
+  date: Date | null;
+  onSelect: (date: Date | null) => void;
+}
+
+export function CalendarComponent({ date, onSelect }: CalendarComponentProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
-          className={cn(
-            "w-[240px] h-[42px] justify-start text-left font-normal",
-            !date && "text-muted-foreground"
-          )}
+          className={
+            "w-full justify-start text-left font-normal"
+          }
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -37,7 +35,7 @@ export function CalendarComponent({
         <Calendar
           mode="single"
           selected={date || undefined}
-          onSelect={onSelect}
+          onSelect={(day) => onSelect(day || null)}
           initialFocus
         />
       </PopoverContent>
