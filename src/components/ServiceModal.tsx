@@ -3,10 +3,11 @@ import { CalendarComponent } from "./calendar";
 
 interface ServiceRecord {
   id: string;
-  serviceType: string;
+  type: string;
   mileage: number;
-  serviceDate: {
+  date: {
     seconds: number;
+    toDate: () => Date;
   };
   cost: number;
 }
@@ -18,25 +19,35 @@ interface ServiceModalProps {
   vehicleId: string;
   onDelete?: (id: string) => void;
   onEdit?: (id: string, updates: { 
-    serviceType: string; 
+    type: string;
     cost: number;
-    serviceDate: Date;
+    date: Date;
     mileage: number;
   }) => void;
   onCancel: () => void;
 }
 
 export const ServiceModal = ({ show, record, mode, onDelete, onEdit, onCancel, vehicleId }: ServiceModalProps) => {
-  const [editText, setEditText] = useState(record?.serviceType || '');
+  const [editText, setEditText] = useState(record?.type || '');
   const [editCost, setEditCost] = useState(record?.cost?.toString() || '');
   const [editDate, setEditDate] = useState<Date | null>(null);
   const [editMileage, setEditMileage] = useState(record?.mileage?.toString() || '');
 
   useEffect(() => {
     if (record && mode === 'edit') {
-      setEditText(record.serviceType);
+      setEditText(record.type);
       setEditCost(record.cost.toString());
-      setEditDate(record.serviceDate ? new Date(record.serviceDate.seconds * 1000) : null);
+      if (record.date) {
+        if (record.date.toDate) {
+          setEditDate(record.date.toDate());
+        } else if (record.date.seconds) {
+          setEditDate(new Date(record.date.seconds * 1000));
+        } else {
+          setEditDate(new Date(record.date.seconds * 1000));
+        }
+      } else {
+        setEditDate(null);
+      }
       setEditMileage(record.mileage.toString());
     }
   }, [record, mode]);
@@ -47,9 +58,9 @@ export const ServiceModal = ({ show, record, mode, onDelete, onEdit, onCancel, v
     e.preventDefault();
     if (mode === 'edit' && onEdit && editDate) {
       onEdit(record.id, {
-        serviceType: editText,
+        type: editText,
         cost: Number(editCost),
-        serviceDate: editDate,
+        date: editDate,
         mileage: Number(editMileage)
       });
     }
@@ -63,14 +74,21 @@ export const ServiceModal = ({ show, record, mode, onDelete, onEdit, onCancel, v
             <h2 className="text-xl font-bold mb-4">Delete Service Record</h2>
             <p className="mb-4">Are you sure you want to delete this service record?</p>
             <div className="mb-4">
-              <p><strong>Service Type:</strong> {record.serviceType}</p>
-              <p><strong>Mileage:</strong> {record.mileage}</p>
+              <p><strong>Service Type:</strong> {record.type}</p>
+              <p><strong>Mileage:</strong> {record.mileage.toLocaleString()}</p>
               <p><strong>Service Date:</strong> {
-                record.serviceDate ? 
-                new Date(record.serviceDate.seconds * 1000).toLocaleDateString() : 
-                "N/A"
+                record.date ? (
+                  record.date.toDate ? 
+                    record.date.toDate().toLocaleDateString() :
+                    record.date.seconds ?
+                      new Date(record.date.seconds * 1000).toLocaleDateString() :
+                      new Date(record.date.seconds * 1000).toLocaleDateString()
+                ) : "N/A"
               }</p>
-              <p><strong>Cost:</strong> ${record.cost}</p>
+              <p><strong>Cost:</strong> ${record.cost.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}</p>
             </div>
             <div className="flex justify-end gap-2">
               <button 

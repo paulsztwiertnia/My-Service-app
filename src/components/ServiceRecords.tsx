@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase-config";
 import { CalendarComponent } from "./calendar";
 import { ServiceModal } from './ServiceModal';
@@ -70,7 +70,7 @@ export default function ServiceRecords({ vehicleId }: ServiceRecordsProps) {
       await addDoc(servicesRef, {
         type: text,
         cost: Number(cost),
-        date: date,
+        date: Timestamp.fromDate(date),
         mileage: Number(mileage),
         dateCreated: new Date().toISOString()
       });
@@ -117,26 +117,33 @@ export default function ServiceRecords({ vehicleId }: ServiceRecordsProps) {
   };
 
   const handleModalEdit = async (id: string, updates: { 
-    serviceType: string; 
+    type: string;
     cost: number;
-    serviceDate: Date;
+    date: Date;
     mileage: number;
   }) => {
     if (!auth.currentUser) return;
 
     try {
       const recordRef = doc(db, `users/${auth.currentUser.uid}/vehicles/${vehicleId}/serviceRecords/${id}`);
-      await updateDoc(recordRef, updates);
+      await updateDoc(recordRef, {
+        ...updates,
+        date: Timestamp.fromDate(updates.date)
+      });
       
       // Update local state
       setRecords(prevRecords => {
         const updatedRecords = prevRecords.map(record => 
-          record.id === id ? { ...record, ...updates } : record
+          record.id === id ? {
+            ...record,
+            ...updates,
+            date: Timestamp.fromDate(updates.date)
+          } : record
         );
         return sortRecordsByDate(updatedRecords);
       });
       
-      setModal({ show: false, id: null, mode: 'edit' });
+      setModal({ show: false, id: null, mode: 'delete' });
     } catch (error) {
       console.error("Error updating service:", error);
       alert("Failed to update service record. Please try again.");
