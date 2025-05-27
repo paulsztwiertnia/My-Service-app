@@ -10,7 +10,6 @@ export default function Dashboard() {
   // State variables
   const [user, setUser] = useState<any>(null); // Stores the authenticated user object
   const [loading, setLoading] = useState(true); // Tracks if data is loading
-
   const router = useRouter(); // Next.js router instance for navigation
 
   // Effect for handling authentication state
@@ -32,9 +31,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="">
-        <NavBar />
-      </div>
+      <NavBar />
       
       <div className="flex flex-col justify-center items-center mx-10 mt-10">
         {user && <VehicleRecords userId={user.uid} />}

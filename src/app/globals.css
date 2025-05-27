@@ -78,7 +78,7 @@
 }
 
 
-.view-button {
+.green-button {
   color: #008000;
   background-color: white;
   border-color: #008000;
@@ -87,12 +87,12 @@
   @apply px-4 py-2 rounded;
 }
 
-.view-button:hover {
+.green-button:hover {
   background-color: #008000;
   color: white;
 }
 
-.edit-button {
+.blue-button {
   color: #023E8A;
   background-color: white;
   border-color: #023E8A;
@@ -101,12 +101,18 @@
   @apply px-4 py-2 rounded;
 }
 
-.edit-button:hover {  
+.blue-button:hover {  
   background-color: #023E8A;
   color: white;
 }
 
-.delete-button {
+.blue-button-2 {
+  background-color: #023E8A;
+  color: white;
+  @apply px-4 py-2 rounded;
+}
+
+.red-button {
   color: #d00000;
   background-color: white;
   border-color: #d00000;
@@ -115,7 +121,7 @@
   @apply px-4 py-2 rounded;
 }
 
-.delete-button:hover {
+.red-button:hover {
   background-color: #d00000;
   color: white;
 }

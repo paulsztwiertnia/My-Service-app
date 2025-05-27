@@ -17,8 +17,8 @@ export default function NavBar() {
   }, [auth]);
 
   return (
-    <nav >
-      <div className="flex flex-row justify-between gap-2">
+    <nav>
+      <div className="flex flex-row justify-between border-gray-50 border-2 py-8 px-4">
         <div>
         <Link href="/signup">
           <Image src="/drive-wise-website-logo.png" alt="logo" width={200} height={150} />
